@@ -1,0 +1,85 @@
+name: Build experimental Windows installer
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 180
+    env:
+      AUTOBUILD_ADDRSIZE: 64
+      AUTOBUILD_CONFIGURATION: ReleaseFS_open
+      AUTOBUILD_VSVER: "170"
+      LL_SKIP_REQUIRE_SYSROOT: "1"
+      FIRESTORM_RENDER_BACKEND: vulkan
+    steps:
+      - name: Checkout build definition
+        uses: actions/checkout@v4
+
+      - name: Checkout official Firestorm source
+        shell: bash
+        run: |
+          git clone --depth 1 --branch Firestorm_Release_7.2.4.80712 \
+            https://github.com/FirestormViewer/phoenix-firestorm.git viewer
+          cd viewer
+          git apply --check ../patches/firestorm-vulkan-0.31.patch
+          git apply ../patches/firestorm-vulkan-0.31.patch
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build tools
+        shell: powershell
+        run: |
+          choco install vulkan-sdk nsis -y --no-progress
+          python -m pip install --upgrade pip
+          python -m pip install autobuild llsd
+
+      - name: Checkout Firestorm build variables
+        shell: bash
+        run: |
+          git clone --depth 1 https://github.com/FirestormViewer/fs-build-variables.git build-variables
+          echo "AUTOBUILD_VARIABLES_FILE=$GITHUB_WORKSPACE/build-variables/variables" >> "$GITHUB_ENV"
+
+      - name: Configure open-source Vulkan build
+        working-directory: viewer
+        shell: cmd
+        run: >-
+          autobuild configure -A 64 -c ReleaseFS_open --
+          --package --chan "Firestorm Vulkan Experimental"
+          -DLL_TESTS:BOOL=FALSE
+          -DFIRESTORM_VULKAN_EXPERIMENTAL:BOOL=ON
+
+      - name: Build and package
+        working-directory: viewer
+        shell: cmd
+        run: autobuild build -A 64 -c ReleaseFS_open --no-configure
+
+      - name: Collect installer and diagnostics
+        if: always()
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          Get-ChildItem viewer -Recurse -File -Include *.exe,*.msi,*.log |
+            Where-Object {
+              $_.FullName -match 'installer|setup|logs|newview' -or
+              $_.Name -match 'Firestorm.*\.(exe|msi)$'
+            } |
+            Copy-Item -Destination artifacts -Force
+          Get-ChildItem artifacts
+
+      - name: Upload Windows package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: firestorm-vulkan-windows
+          path: artifacts
+          if-no-files-found: warn
+          retention-days: 14
+
