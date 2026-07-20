@@ -25,12 +25,11 @@ jobs:
       - name: Checkout official Firestorm source
         shell: bash
         run: |
-          git clone --depth 1 --branch Firestorm_Release_7.2.4.80712 \
-            https://github.com/FirestormViewer/phoenix-firestorm.git viewer
+          git clone --branch Firestorm_Release_7.2.4.80712 \
+          https://github.com/FirestormViewer/phoenix-firestorm.git viewer
           cd viewer
 
-          git apply --check ../patches/firestorm-vulkan-0.31.patch
-          git apply ../patches/firestorm-vulkan-0.31.patch
+          git apply --3way --whitespace=nowarn ../patches/firestorm-vulkan-0.31.patch
 
           git apply --check ../patches/firestorm-vulkan-0.31-build-hotfix.patch
           git apply ../patches/firestorm-vulkan-0.31-build-hotfix.patch
