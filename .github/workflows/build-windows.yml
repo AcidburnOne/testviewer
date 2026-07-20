@@ -10,12 +10,14 @@ jobs:
   windows:
     runs-on: windows-2022
     timeout-minutes: 180
+
     env:
       AUTOBUILD_ADDRSIZE: 64
       AUTOBUILD_CONFIGURATION: ReleaseFS_open
       AUTOBUILD_VSVER: "170"
       LL_SKIP_REQUIRE_SYSROOT: "1"
       FIRESTORM_RENDER_BACKEND: vulkan
+
     steps:
       - name: Checkout build definition
         uses: actions/checkout@v4
@@ -26,8 +28,12 @@ jobs:
           git clone --depth 1 --branch Firestorm_Release_7.2.4.80712 \
             https://github.com/FirestormViewer/phoenix-firestorm.git viewer
           cd viewer
+
           git apply --check ../patches/firestorm-vulkan-0.31.patch
           git apply ../patches/firestorm-vulkan-0.31.patch
+
+          git apply --check ../patches/firestorm-vulkan-0.31-build-hotfix.patch
+          git apply ../patches/firestorm-vulkan-0.31-build-hotfix.patch
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -82,4 +88,3 @@ jobs:
           path: artifacts
           if-no-files-found: warn
           retention-days: 14
-
