@@ -1,0 +1,101 @@
+diff --git a/indra/llrender/llvulkancontext.h b/indra/llrender/llvulkancontext.h
+--- a/indra/llrender/llvulkancontext.h
++++ b/indra/llrender/llvulkancontext.h
+@@ -24,7 +24,7 @@ enum class LLVulkanFrameResult
+     PRESENTED,
+     NOT_READY,
+     SWAPCHAIN_OUT_OF_DATE,
+-    ERROR
++    FAILURE
+ };
+ 
+ enum class LLVulkanPrimitiveTopology
+diff --git a/indra/llrender/llvulkancontext.cpp b/indra/llrender/llvulkancontext.cpp
+--- a/indra/llrender/llvulkancontext.cpp
++++ b/indra/llrender/llvulkancontext.cpp
+@@ -2670,5 +2670,5 @@ LLVulkanFrameResult LLVulkanContext::presentValidationFrame()
+         {
+             mImpl->error = "Unable to mirror Firestorm reflection probes";
+-            return LLVulkanFrameResult::ERROR;
++            return LLVulkanFrameResult::FAILURE;
+         }
+     }
+@@ -2912,4 +2912,4 @@ LLVulkanFrameResult LLVulkanContext::presentValidationFrame()
+         mImpl->error = "vkWaitForFences failed with code " +
+                        std::to_string(status);
+-        return LLVulkanFrameResult::ERROR;
++        return LLVulkanFrameResult::FAILURE;
+     }
+@@ -2950,4 +2950,4 @@ LLVulkanFrameResult LLVulkanContext::presentValidationFrame()
+     {
+         mImpl->error = "Unable to upload Vulkan shadow transforms";
+-        return LLVulkanFrameResult::ERROR;
++        return LLVulkanFrameResult::FAILURE;
+     }
+@@ -2979,4 +2979,4 @@ LLVulkanFrameResult LLVulkanContext::presentValidationFrame()
+     {
+         mImpl->error = "Unable to upload Vulkan probe metadata";
+-        return LLVulkanFrameResult::ERROR;
++        return LLVulkanFrameResult::FAILURE;
+     }
+@@ -3003,4 +3003,4 @@ LLVulkanFrameResult LLVulkanContext::presentValidationFrame()
+         mImpl->error = "vkAcquireNextImageKHR failed with code " +
+                        std::to_string(status);
+-        return LLVulkanFrameResult::ERROR;
++        return LLVulkanFrameResult::FAILURE;
+     }
+@@ -3019,4 +3019,4 @@ LLVulkanFrameResult LLVulkanContext::presentValidationFrame()
+         mImpl->error = "vkBeginCommandBuffer failed with code " +
+                        std::to_string(status);
+-        return LLVulkanFrameResult::ERROR;
++        return LLVulkanFrameResult::FAILURE;
+     }
+@@ -3458,4 +3458,4 @@ LLVulkanFrameResult LLVulkanContext::presentValidationFrame()
+         mImpl->error = "vkEndCommandBuffer failed with code " +
+                        std::to_string(status);
+-        return LLVulkanFrameResult::ERROR;
++        return LLVulkanFrameResult::FAILURE;
+     }
+@@ -3479,12 +3479,12 @@ LLVulkanFrameResult LLVulkanContext::presentValidationFrame()
+         mImpl->error = "vkResetFences failed with code " +
+                        std::to_string(status);
+-        return LLVulkanFrameResult::ERROR;
++        return LLVulkanFrameResult::FAILURE;
+     }
+     status = vkQueueSubmit(mImpl->graphics_queue, 1, &submit_info,
+                            mImpl->frame_fences[frame]);
+     if (status != VK_SUCCESS)
+     {
+         mImpl->error = "vkQueueSubmit failed with code " +
+                        std::to_string(status);
+-        return LLVulkanFrameResult::ERROR;
++        return LLVulkanFrameResult::FAILURE;
+     }
+@@ -3511,4 +3511,4 @@ LLVulkanFrameResult LLVulkanContext::presentValidationFrame()
+         mImpl->error = "vkQueuePresentKHR failed with code " +
+                        std::to_string(status);
+-        return LLVulkanFrameResult::ERROR;
++        return LLVulkanFrameResult::FAILURE;
+     }
+@@ -3569,6 +3569,6 @@ const char* LLVulkanContext::frameResultName(LLVulkanFrameResult result)
+         case LLVulkanFrameResult::PRESENTED: return "presented";
+         case LLVulkanFrameResult::NOT_READY: return "not-ready";
+         case LLVulkanFrameResult::SWAPCHAIN_OUT_OF_DATE: return "out-of-date";
+-        case LLVulkanFrameResult::ERROR: return "error";
++        case LLVulkanFrameResult::FAILURE: return "error";
+     }
+     return "unknown";
+diff --git a/indra/llrender/llvulkanprobe.cpp b/indra/llrender/llvulkanprobe.cpp
+--- a/indra/llrender/llvulkanprobe.cpp
++++ b/indra/llrender/llvulkanprobe.cpp
+@@ -13,7 +13,9 @@
+ #include <sstream>
+ 
+ #if LL_WINDOWS
+-# define WIN32_LEAN_AND_MEAN
++# ifndef WIN32_LEAN_AND_MEAN
++#  define WIN32_LEAN_AND_MEAN
++# endif
+ # include <windows.h>
+ #elif LL_LINUX
+ # include <dlfcn.h>
